@@ -1,55 +1,42 @@
-# protoc-gen-gorm
+# protoc-gen-api-config
 
-`protoc-gen-gorm`是用来在Protobuf Message结构体中注入 [gorm](https//gorm.io) 标签(Tag)的 `protoc` 插件。
+`protoc-gen-api-config`是基于grpc-gateway的[gRPC API Configuration](https://grpc-ecosystem.github.io/grpc-gateway/docs/mapping/grpc_api_configuration/)能力生成标准URL路径的 `protoc` 插件。
 
 [English](./README.md)
-
-## 原理
-
-参考了[protoc-go-inject-tag](https://github.com/favadi/protoc-go-inject-tag)的实现，在 `protoc-gen-go`插件生成代码后，再使用`github.com/lyft/protoc-gen-star`注入`gorm`的Tag。
 
 ## 安装
 
 ```
-go install github.com/defool/protoc-gen-gorm
+go install github.com/defool/protoc-gen-api-config
 ```
 
 ## 示例
  
- ./example/foo/v1/db.proto: 
+ ./example/foo/v1/api.proto: 
 ```
 syntax = "proto3";
+
 package foo.v1;
 option go_package="foo/v1";
 
-// 引用buf目录中的proto文件
-import "gorm/v1/gorm.proto";
 
-message User {
-    uint64 id = 1;
-    string name = 2 [(gorm)="size:32;column:uname;"];
-    string user_email = 3 [(gorm)="size:32;"];
-    uint64 company_id = 4;
-    Company company = 5;
-    repeated Group groups = 6 [(gorm)="many2many:user_languages;"]; 
+message SayHelloRequest {
+  string name = 1;
 }
 
-message Company {
-    uint64 id = 1;
-    string name = 2;
+message SayHelloResponse {
+  string reply = 1;
 }
 
-message Group {
-    uint64 id = 1;
-    string name = 2;
+service ExampleService {
+  rpc SayHello (SayHelloRequest) returns (SayHelloResponse);
 }
 ```
 
 使用protc生成桩代码:
 ```
-protoc  -I . -I ./buf  --go_out="./example/generated"  ./example/foo/v1/db.proto
-protoc  -I . -I ./buf  --gorm_out="outdir=./example/generated:."  ./example/foo/v1/db.proto
-# 注意gorm插件的输出的目录通过outdir参数传入
+protoc  -I . --go_out="./example/generated"  ./example/foo/v1/api.proto
+protoc  -I . --api-config_out="./example/generated"  ./example/foo/v1/api.proto
 ```
 
 或使用`buf`来生成
@@ -61,27 +48,32 @@ plugins:
   - name: go
     out: generated
     opt: paths=source_relative
+  - name: go-grpc
+    out: generated
+    opt:
+      - paths=source_relative
+  - name: api-config
+    out: generated
+    opt: paths=source_relative
 ```
 
-buf.gen.gorm.yaml:
+buf.gen.second.yaml:
 ```
 version: v1
 plugins:  
-  - name: gorm
-    out: .
+  - name: grpc-gateway
+    out: generated
     opt:
+    - grpc_api_configuration=generated/api-config.yaml
     - paths=source_relative
-    - outdir=./generated
-    - replace_keyword=true
+  - name: openapiv2
+    out: generated
+    opt:
+    - grpc_api_configuration=generated/api-config.yaml
 ```
 
 需要执行二步来生成桩代码：
 ```
 buf generate
-buf generate --template buf.gen.gorm.yaml
+buf generate --template buf.gen.second.yaml
 ```
-
-## 其他功能
-
-- 插件选项`replace_keyword=true`时，如果gorm对应的column名是MySQL的关键字，则使用表名_原字段名替换原字段名
-- 生成gorm的字段名常量，避免在代码中直接使用数据库中的字段名

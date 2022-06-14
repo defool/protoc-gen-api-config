@@ -1,0 +1,12 @@
+version: v1
+plugins:  
+  - name: grpc-gateway
+    out: generated
+    opt:
+    - grpc_api_configuration=generated/api-config.yaml
+    - paths=source_relative
+  - name: openapiv2
+    out: generated
+    opt:
+    - grpc_api_configuration=generated/api-config.yaml
+    

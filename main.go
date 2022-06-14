@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	debugEnvName = "GORM_TAG_DEBUG"
+	debugEnvName = "API_CONFIG_DEBUG"
 	enableLogger bool
 )
 

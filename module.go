@@ -2,10 +2,7 @@ package main
 
 import (
 	"bytes"
-	"go/parser"
-	"go/printer"
-	"go/token"
-	"path/filepath"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -28,96 +25,53 @@ func (m *mod) InitContext(c pgs.BuildContext) {
 }
 
 func (mod) Name() string {
-	return "gorm"
+	return "api-config"
 }
 
 func (m mod) Execute(targets map[string]pgs.File, gpkgs map[string]pgs.Package) []pgs.Artifact {
-	applyOptions(m.Parameters().String())
 	initLogger(enableLogger)
 
-	logger.Printf("opts is %+v | %s\n", opt, m.Parameters().String())
-
+	methods := make([]MethodInfo, 0)
+	svcKey := "Service"
 	for _, f := range targets {
-		if !isGormPB(f.Imports()) {
-			continue
+		pkgName := *f.Descriptor().Package
+		pkgNameX := strings.SplitN(pkgName, ".", 2)[0]
+		for _, svc := range f.Services() {
+			svcName := svc.Name().String()
+			svcNameX := svcName
+			if strings.HasSuffix(svcName, svcKey) {
+				svcNameX = strings.ToLower(svcName[:len(svcName)-len(svcKey)])
+			}
+			for _, method := range svc.Methods() {
+				methodName := method.Name().String()
+				methodNameX := firstLowger(methodName)
+				methods = append(methods, MethodInfo{
+					Name: fmt.Sprintf("%s.%s.%s", pkgName, svcName, methodName),
+					Path: fmt.Sprintf("/api/v1/%s/%s/%s", pkgNameX, svcNameX, methodNameX),
+				})
+			}
 		}
-		m.retag(f)
-		m.genGorm(f)
 	}
 
+	info := &Config{
+		Methods: methods,
+	}
+	filename := m.Context.Params().OutputPath() + "/api-config.yaml"
+	m.genAPIConfig(info, filename)
 	return m.Artifacts()
 }
 
-func (m mod) genGorm(f pgs.File) {
-	pkgName := *f.Descriptor().Package
-	if idx := strings.LastIndexByte(pkgName, '.'); idx >= 0 {
-		pkgName = pkgName[idx+1:]
-	}
-	sourceFile := *f.Descriptor().Name
-	name := strings.Title(filepath.Base(sourceFile))
-	if idx := strings.IndexByte(name, '.'); idx >= 0 {
-		name = name[:idx]
-	}
-	info := FileFieldInfo{
-		Name:    name,
-		Source:  sourceFile,
-		Package: pkgName,
-	}
-	for _, msg := range f.AllMessages() {
-		typeName := underscoreToCamelCase(*msg.Descriptor().Name)
-		var fields []FieldInfo
-		for _, fe := range msg.Fields() {
-			columnName := camelCaseToUnderscore(*fe.Descriptor().Name)
-			goName := underscoreToCamelCase(columnName)
-			columnName = applyReplaceKeyword(typeName, columnName)
-			fields = append(fields, FieldInfo{Name: goName, Field: columnName})
-		}
-
-		info.Messages = append(info.Messages, MessageFieldInfo{
-			Name:   typeName,
-			Fields: fields,
-		})
-	}
-
+func (m mod) genAPIConfig(info *Config, filename string) {
 	buf := bytes.NewBuffer(nil)
 	tp := template.Must(template.New("").Parse(fieldTemplate))
 	err := tp.Execute(buf, info)
 	m.CheckErr(err)
-
-	filename := m.Context.OutputPath(f).SetExt(".gorm.go").String()
-	if opt.outdir != "" {
-		filename = filepath.Join(opt.outdir, filename)
-	}
-
 	m.AddGeneratorFile(filename, buf.String())
 }
 
-func (m mod) retag(f pgs.File) {
-	tags, err := getTags(f, &m)
-	logger.Println("imports", f.Imports())
-	logger.Println("tags is", tags, err)
-	m.CheckErr(err)
-	filename := m.Context.OutputPath(f).SetExt(".go").String()
-	if opt.outdir != "" {
-		filename = filepath.Join(opt.outdir, filename)
+func firstLowger(s string) string {
+	if len(s) == 0 {
+		return ""
 	}
-	fs := token.NewFileSet()
-	fn, err := parser.ParseFile(fs, filename, nil, parser.ParseComments)
-	m.CheckErr(err)
-	err = retagOnAst(fn, tags)
-	m.CheckErr(err)
-
-	var buf strings.Builder
-	m.CheckErr(printer.Fprint(&buf, fs, fn))
-
-	m.OverwriteGeneratorFile(filename, buf.String())
-}
-
-func isGormPB(files []pgs.File) bool {
-	for i := 0; i < len(files); i++ {
-		if *files[i].Descriptor().Name == "gorm/v1/gorm.proto" {
-			return true
-		}
-	}
-	return false
+	return strings.ToLower(s[:1]) + s[1:]
 }

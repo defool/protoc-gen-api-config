@@ -1,9 +1,25 @@
 package main
 
 import (
+	"io"
+	"log"
+	"os"
 	"strings"
 	"unicode"
 )
+
+var (
+	logger *log.Logger
+)
+
+func initLogger(enable bool) {
+	logger = log.Default()
+	if enable {
+		logger.SetOutput(os.Stderr)
+	} else {
+		logger.SetOutput(io.Discard)
+	}
+}
 
 // camelCaseToUnderscore copy from https://github.com/asaskevich/govalidator/blob/master/utils.go#L107-L119
 // Ex: AbcDef => abc_dev

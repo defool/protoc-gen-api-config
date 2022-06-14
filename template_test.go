@@ -7,32 +7,15 @@ import (
 )
 
 func TestTemplate(t *testing.T) {
-	val := FileFieldInfo{
-		Source:  "foo/v1/db.proto",
-		Package: "v1",
-		Name:    "Db",
-		Messages: []MessageFieldInfo{
+	val := Config{
+		Methods: []MethodInfo{
 			{
 				Name: "User",
-				Fields: []FieldInfo{
-					{
-						Name:  "Email",
-						Field: "email",
-					},
-					{
-						Name:  "Name",
-						Field: "user_name",
-					},
-				},
+				Path: "/abc",
 			},
 			{
-				Name: "Group",
-				Fields: []FieldInfo{
-					{
-						Name:  "Name",
-						Field: "group_name",
-					},
-				},
+				Name: "User",
+				Path: "/abc",
 			},
 		},
 	}

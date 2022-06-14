@@ -1,55 +1,42 @@
-# protoc-gen-gorm
+# protoc-gen-api-config
 
-`protoc-gen-gorm` is a protoc plugin for injecting `[gorm](https//gorm.io)` tag to protobuf message。
+`protoc-gen-api-config` is a protoc plugin to make standard URL path based on grpc-gateway [gRPC API Configuration](https://grpc-ecosystem.github.io/grpc-gateway/docs/mapping/grpc_api_configuration/).
 
 [中文介绍](./README.zh.md)
-
-## How it works
-
-Inspired by [protoc-go-inject-tag](https://github.com/favadi/protoc-go-inject-tag), protoc-gen-gorm runs after the plugin `[protoc-gen-go](https://golang/protobuf/protoc-gen-go)` and injects `gorm` tag to protobuf message.
 
 ## Install
 
 ```
-go install github.com/defool/protoc-gen-gorm
+go install github.com/defool/protoc-gen-api-config
 ```
 
 ## Example
  
- ./example/foo/v1/db.proto: 
+ ./example/foo/v1/api.proto: 
 ```
 syntax = "proto3";
+
 package foo.v1;
 option go_package="foo/v1";
 
-// reference of proto file in `./buf`
-import "gorm/v1/gorm.proto";
 
-message User {
-    uint64 id = 1;
-    string name = 2 [(gorm)="size:32;column:uname;"];
-    string user_email = 3 [(gorm)="size:32;"];
-    uint64 company_id = 4;
-    Company company = 5;
-    repeated Group groups = 6 [(gorm)="many2many:user_languages;"]; 
+message SayHelloRequest {
+  string name = 1;
 }
 
-message Company {
-    uint64 id = 1;
-    string name = 2;
+message SayHelloResponse {
+  string reply = 1;
 }
 
-message Group {
-    uint64 id = 1;
-    string name = 2;
+service ExampleService {
+  rpc SayHello (SayHelloRequest) returns (SayHelloResponse);
 }
 ```
 
-generate stub file in two step by protoc：
+generate stub file in two step by protoc:
 ```
-protoc  -I . -I ./buf  --go_out="./example/generated"  ./example/foo/v1/db.proto
-protoc  -I . -I ./buf  --gorm_out="outdir=./example/generated:."  ./example/foo/v1/db.proto
-# Note: The out argment is replace by outdir option
+protoc  -I . --go_out="./example/generated"  ./example/foo/v1/api.proto
+protoc  -I . --api-config_out="./example/generated"  ./example/foo/v1/api.proto
 ```
 
 OR `buf` use case:
@@ -61,27 +48,32 @@ plugins:
   - name: go
     out: generated
     opt: paths=source_relative
+  - name: go-grpc
+    out: generated
+    opt:
+      - paths=source_relative
+  - name: api-config
+    out: generated
+    opt: paths=source_relative
 ```
 
-buf.gen.gorm.yaml:
+buf.gen.second.yaml:
 ```
 version: v1
 plugins:  
-  - name: gorm
-    out: .
+  - name: grpc-gateway
+    out: generated
     opt:
+    - grpc_api_configuration=generated/api-config.yaml
     - paths=source_relative
-    - outdir=./generated
-    - replace_keyword=true
+  - name: openapiv2
+    out: generated
+    opt:
+    - grpc_api_configuration=generated/api-config.yaml
 ```
 
 generate stub file in two step：
 ```
 buf generate
-buf generate --template buf.gen.gorm.yaml
+buf generate --template buf.gen.second.yaml
 ```
-
-## Other features
-
-- When use the option `replace_keyword=true`，the column name will be replace by table+column if it's keyword in MySQL.
-- Generate the database column name as variable value to avoid using column name in code directly.
