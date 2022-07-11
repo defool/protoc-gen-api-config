@@ -35,7 +35,12 @@ func (m mod) Execute(targets map[string]pgs.File, gpkgs map[string]pgs.Package) 
 	svcKey := "Service"
 	for _, f := range targets {
 		pkgName := *f.Descriptor().Package
-		pkgNameX := strings.SplitN(pkgName, ".", 2)[0]
+		tmp := strings.SplitN(pkgName, ".", 2)
+		pkgNameX := tmp[0]
+		version := "v1"
+		if len(tmp) > 1 {
+			version = tmp[1]
+		}
 		for _, svc := range f.Services() {
 			svcName := svc.Name().String()
 			svcNameX := svcName
@@ -47,7 +52,7 @@ func (m mod) Execute(targets map[string]pgs.File, gpkgs map[string]pgs.Package) 
 				methodNameX := firstLowger(methodName)
 				methods = append(methods, MethodInfo{
 					Name: fmt.Sprintf("%s.%s.%s", pkgName, svcName, methodName),
-					Path: fmt.Sprintf("/api/v1/%s/%s/%s", pkgNameX, svcNameX, methodNameX),
+					Path: fmt.Sprintf("/api/%s/%s/%s/%s", pkgNameX, version, svcNameX, methodNameX),
 				})
 			}
 		}

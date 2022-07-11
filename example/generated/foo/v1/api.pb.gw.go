@@ -77,12 +77,13 @@ func RegisterExampleServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/foo.v1.ExampleService/SayHello", runtime.WithHTTPPathPattern("/api/v1/foo/example/sayHello"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/foo.v1.ExampleService/SayHello", runtime.WithHTTPPathPattern("/api/foo/v1/example/sayHello"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ExampleService_SayHello_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ExampleService_SayHello_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -124,7 +125,7 @@ func RegisterExampleServiceHandlerFromEndpoint(ctx context.Context, mux *runtime
 
 // RegisterExampleServiceHandler registers the http handlers for service ExampleService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterExampleServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
+func RegisterExampleServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterExampleServiceHandlerClient(ctx, mux, NewExampleServiceClient(conn))
 }
 
@@ -139,12 +140,13 @@ func RegisterExampleServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/foo.v1.ExampleService/SayHello", runtime.WithHTTPPathPattern("/api/v1/foo/example/sayHello"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/foo.v1.ExampleService/SayHello", runtime.WithHTTPPathPattern("/api/foo/v1/example/sayHello"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ExampleService_SayHello_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ExampleService_SayHello_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -159,7 +161,7 @@ func RegisterExampleServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 }
 
 var (
-	pattern_ExampleService_SayHello_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "foo", "example", "sayHello"}, ""))
+	pattern_ExampleService_SayHello_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "foo", "v1", "example", "sayHello"}, ""))
 )
 
 var (
