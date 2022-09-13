@@ -16,7 +16,7 @@
     "application/json"
   ],
   "paths": {
-    "/api/foo/v1/example/sayHello": {
+    "/api/foo/v1/example/say-hello": {
       "post": {
         "operationId": "ExampleService_SayHello",
         "responses": {

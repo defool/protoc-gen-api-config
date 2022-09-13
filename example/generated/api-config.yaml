@@ -5,6 +5,6 @@ config_version: 3
 http:
   rules:
     - selector: foo.v1.ExampleService.SayHello
-      post: /api/foo/v1/example/sayHello
+      post: /api/foo/v1/example/say-hello
       body: "*"
     

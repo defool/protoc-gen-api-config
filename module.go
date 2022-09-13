@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/iancoleman/strcase"
 	pgs "github.com/lyft/protoc-gen-star"
 	pgsgo "github.com/lyft/protoc-gen-star/lang/go"
 )
@@ -43,13 +44,11 @@ func (m mod) Execute(targets map[string]pgs.File, gpkgs map[string]pgs.Package) 
 		}
 		for _, svc := range f.Services() {
 			svcName := svc.Name().String()
-			svcNameX := svcName
-			if strings.HasSuffix(svcName, svcKey) {
-				svcNameX = strings.ToLower(svcName[:len(svcName)-len(svcKey)])
-			}
+			svcNameX := strings.TrimSuffix(svcName, svcKey)
+			svcNameX = strcase.ToKebab(svcNameX)
 			for _, method := range svc.Methods() {
 				methodName := method.Name().String()
-				methodNameX := firstLowger(methodName)
+				methodNameX := strcase.ToKebab(methodName)
 				methods = append(methods, MethodInfo{
 					Name: fmt.Sprintf("%s.%s.%s", pkgName, svcName, methodName),
 					Path: fmt.Sprintf("/api/%s/%s/%s/%s", pkgNameX, version, svcNameX, methodNameX),
